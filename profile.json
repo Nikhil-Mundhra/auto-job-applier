@@ -1,0 +1,34 @@
+{
+  "full_name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+1 555 010 0000",
+  "location": "New York, NY",
+  "resume_path": "/Users/yourname/Documents/resume.pdf",
+  "linkedin": "https://linkedin.com/in/janedoe",
+  "work_history": [
+    {
+      "company": "Acme Corp",
+      "title": "Software Engineer",
+      "start_date": "2022/06",
+      "end_date": "present",
+      "duties": [
+        "Built the internal analytics dashboard used by the growth team",
+        "Led migration of the data pipeline to a new warehouse"
+      ],
+      "skill_tags": ["python", "sql", "react"]
+    }
+  ],
+  "education": [
+    {
+      "school": "NYU Abu Dhabi",
+      "degree": "BS Computer Science",
+      "start_year": 2022,
+      "end_year": 2026
+    }
+  ],
+  "screening_preferences": {
+    "requires_sponsorship": false,
+    "willing_to_relocate": true,
+    "salary_expectation": "open to discussion, market rate for the role"
+  }
+}
