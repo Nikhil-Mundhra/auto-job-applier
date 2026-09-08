@@ -194,6 +194,195 @@ def test_build_task_with_company_intelligence():
     assert "Stop as soon as you reach the final review or submit page" in task
 
 
+def test_budget_verify_exceeded_error():
+    import pytest
+    budget = LLMBudgetManager(min_calls=1, max_calls=2, llm_fn=lambda s, u: "ok")
+    budget.call_count = 5
+    with pytest.raises(LLMBudgetExceededError):
+        budget.verify()
+
+
+def test_default_llm_call_openrouter():
+    import os
+    from unittest.mock import patch, MagicMock
+    from jd_extractor import default_llm_call
+
+    with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake_openrouter"}, clear=True):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"choices": [{"message": {"content": "openrouter response"}}]}).encode("utf-8")
+        mock_resp.__enter__.return_value = mock_resp
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            res = default_llm_call("sys", "user")
+            assert res == "openrouter response"
+
+
+def test_default_llm_call_openrouter_error_fallback():
+    import os
+    from unittest.mock import patch
+    from jd_extractor import default_llm_call
+
+    with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake_openrouter"}, clear=True):
+        with patch("urllib.request.urlopen", side_effect=Exception("Network error")):
+            res = default_llm_call("sys", "user")
+            assert "company_summary" in res
+
+
+def test_default_llm_call_anthropic():
+    import os
+    from unittest.mock import patch, MagicMock
+    from jd_extractor import default_llm_call
+
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "fake_anthropic"}, clear=True):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"content": [{"text": "anthropic response"}]}).encode("utf-8")
+        mock_resp.__enter__.return_value = mock_resp
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            res = default_llm_call("sys", "user")
+            assert res == "anthropic response"
+
+
+def test_default_llm_call_anthropic_error_fallback():
+    import os
+    from unittest.mock import patch
+    from jd_extractor import default_llm_call
+
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "fake_anthropic"}, clear=True):
+        with patch("urllib.request.urlopen", side_effect=Exception("Network error")):
+            res = default_llm_call("sys", "user")
+            assert "company_summary" in res
+
+
+def test_default_llm_call_offline():
+    import os
+    from unittest.mock import patch
+    from jd_extractor import default_llm_call
+
+    with patch.dict(os.environ, {}, clear=True):
+        res = default_llm_call("sys", "user")
+        data = json.loads(res)
+        assert "why_company_answer" in data
+
+
+def test_fetch_url():
+    from unittest.mock import patch, MagicMock
+    from jd_extractor import fetch_url
+
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = b"<html>content</html>"
+    mock_resp.__enter__.return_value = mock_resp
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        html = fetch_url("https://example.com/test")
+        assert "content" in html
+
+
+def test_extract_json_ld_variants():
+    # List format
+    html_list = '<script type="application/ld+json">[{"@type": "JobPosting", "title": "Dev"}]</script>'
+    assert extract_json_ld(html_list)["title"] == "Dev"
+
+    # Graph format
+    html_graph = '<script type="application/ld+json">{"@graph": [{"@type": "JobPosting", "title": "Architect"}]}</script>'
+    assert extract_json_ld(html_graph)["title"] == "Architect"
+
+    # Invalid JSON
+    html_invalid = '<script type="application/ld+json">invalid json</script>'
+    assert extract_json_ld(html_invalid) is None
+
+    # No JSON-LD
+    assert extract_json_ld("<html>no json ld</html>") is None
+
+
+def test_extract_company_name_variants():
+    # String hiringOrganization
+    assert extract_company_name("https://example.com", "", {"hiringOrganization": "String Corp"}) == "String Corp"
+
+    # Ashby
+    assert extract_company_name("https://jobs.ashbyhq.com/scale-ai/123", "") == "Scale Ai"
+
+    # SmartRecruiters
+    assert extract_company_name("https://careers.smartrecruiters.com/bosch/123", "") == "Bosch"
+
+    # Title with 'at'
+    html_at = "<title>Software Engineer at Acme Corp | Jobs</title>"
+    assert extract_company_name("https://jobs.example.com/1", html_at) == "Acme Corp"
+
+    # Title with dash
+    html_dash = "<title>Software Engineer - Global Tech</title>"
+    assert extract_company_name("https://jobs.example.com/1", html_dash) == "Global Tech"
+
+    # Fallback host
+    assert extract_company_name("https://www.uber.com/careers/123", "<title>Careers</title>") == "Uber"
+
+
+def test_extract_company_about_web_variants():
+    from unittest.mock import patch, MagicMock
+
+    assert extract_company_about_web("") == ""
+
+    # Wikipedia exception, DuckDuckGo success
+    mock_ddg = MagicMock()
+    mock_ddg.read.return_value = json.dumps({"AbstractText": "DDG summary of tech company."}).encode("utf-8")
+    mock_ddg.__enter__.return_value = mock_ddg
+
+    def side_effect_req(req, *args, **kwargs):
+        if "wikipedia" in req.full_url:
+            raise Exception("Wiki down")
+        return mock_ddg
+
+    with patch("urllib.request.urlopen", side_effect=side_effect_req):
+        about = extract_company_about_web("SomeOrg Inc.")
+        assert "DDG summary" in about
+
+    # Both fail -> default string
+    with patch("urllib.request.urlopen", side_effect=Exception("All down")):
+        about_fallback = extract_company_about_web("FallbackCorp")
+        assert "FallbackCorp is a technology organization" in about_fallback
+
+
+def test_extract_script_jd_variants():
+    # JSON-LD with skills
+    json_ld = {
+        "title": "Engineer",
+        "description": "A" * 150,
+        "skills": "Python, Docker",
+        "responsibilities": "Building things",
+        "qualifications": "BS degree",
+    }
+    jd = extract_script_jd("<html></html>", json_ld)
+    assert jd is not None
+    assert "Skills: Python, Docker" in jd
+
+    # Known portal selector: job-description class
+    portal_html = f'<div class="job-description">Responsibilities and requirements: {"details " * 40}</div>'
+    res = extract_script_jd(portal_html, None)
+    assert res is not None
+    assert "Responsibilities" in res
+
+    # Body match
+    body_html = f'<body>responsibilities requirements qualifications what you\'ll do {"text " * 60}</body>'
+    res_body = extract_script_jd(body_html, None)
+    assert res_body is not None
+    assert "responsibilities" in res_body
+
+
+def test_prepare_job_context_fetch_and_synthesis_fallbacks():
+    from unittest.mock import patch
+    profile = load_profile()
+
+    # 1. html_content is None -> triggers fetch_url
+    with patch("jd_extractor.fetch_url", return_value="<html><body>Short</body></html>"):
+        budget = LLMBudgetManager(min_calls=1, max_calls=2, llm_fn=lambda s, u: "not json")
+        ctx = prepare_job_context("https://example.com/job", profile, html_content=None, budget_manager=budget)
+        assert ctx["company_name"] == "Example"
+        assert "why_company_answer" in ctx
+
+    # 2. fetch_url raises Exception
+    with patch("jd_extractor.fetch_url", side_effect=Exception("Failed to fetch")):
+        budget = LLMBudgetManager(min_calls=1, max_calls=2, llm_fn=lambda s, u: '{"why_company_answer": "custom"}')
+        ctx = prepare_job_context("https://example.com/job", profile, html_content=None, budget_manager=budget)
+        assert "why_company_answer" in ctx
+
+
 if __name__ == "__main__":
     test_company_name_extraction()
     test_company_about_wikipedia_lookup()
@@ -201,4 +390,17 @@ if __name__ == "__main__":
     test_fallback_path_budget_exactly_two_calls()
     test_budget_guardrails()
     test_build_task_with_company_intelligence()
+    test_budget_verify_exceeded_error()
+    test_default_llm_call_openrouter()
+    test_default_llm_call_openrouter_error_fallback()
+    test_default_llm_call_anthropic()
+    test_default_llm_call_anthropic_error_fallback()
+    test_default_llm_call_offline()
+    test_fetch_url()
+    test_extract_json_ld_variants()
+    test_extract_company_name_variants()
+    test_extract_company_about_web_variants()
+    test_extract_script_jd_variants()
+    test_prepare_job_context_fetch_and_synthesis_fallbacks()
     print("All extractor and budget manager tests passed successfully!")
+

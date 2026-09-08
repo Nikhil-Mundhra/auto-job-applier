@@ -496,16 +496,15 @@ async def fill_application(
                             print(f"  ℹ️  {label_text.strip()}: Optional -> Left unselected")
 
                     # Visa Sponsorship / Work Authorization (Check before location/states to avoid 'United States' false match)
-                    elif any(k in label_clean for k in ["sponsorship", "visa", "authorized to work", "work authorization"]):
-                        if any(k in label_clean for k in ["united states", "u.s.", "usa"]):
-                            sponsorship_needed = True
+                    elif any(k in label_clean for k in ["authorized to work", "legally authorized", "work authorization"]):
+                        if any(k in label_clean for k in ["without", "do not require", "don't require", "without company"]):
+                            target = "No"
+                        elif any(k in label_clean for k in ["united states", "u.s.", "usa"]):
+                            target = "No"
                         elif "india" in label_clean or "uae" in label_clean:
-                            sponsorship_needed = False
+                            target = "Yes"
                         else:
-                            sponsorship_needed = curated.get("target_region") not in ["india", "uae"]
-
-                        asks_without = any(w in label_clean for w in ["without", "do not require", "don't require", "without company"])
-                        target = ("No" if sponsorship_needed else "Yes") if asks_without else ("Yes" if sponsorship_needed else "No")
+                            target = "Yes" if curated.get("target_region") in ["india", "uae"] else "No"
 
                         for opt in opts:
                             opt_l = opt.strip().lower()
@@ -517,8 +516,57 @@ async def fill_application(
                                 results["fields_filled"].append(label_text.strip())
                                 break
 
+                    elif "opt" in label_clean:
+                        # OPT question: "Do you currently work for a US employer under an OPT...?" -> No
+                        for opt in ["No", "N/A"]:
+                            if opt in opts:
+                                await s.select_option(label=opt)
+                                print(f"  ☑️  {label_clean.title()}: {opt}")
+                                results["fields_filled"].append(label_text.strip())
+                                break
+
+                    elif any(k in label_clean for k in ["sponsorship", "visa status", "h-1b", "h1b"]):
+                        # Candidate requires sponsorship unless the job/question is explicitly within UAE or India
+                        requires_sponsorship = profile.get("screening_preferences", {}).get("requires_sponsorship", True)
+                        if "india" in label_clean or "uae" in label_clean or "dubai" in label_clean:
+                            target = "No"
+                        else:
+                            target = "Yes" if requires_sponsorship else "No"
+
+                        for opt in opts:
+                            opt_l = opt.strip().lower()
+                            if any(d == opt_l or d in opt_l for d in ["-- no answer --", "no answer", "select"]):
+                                continue
+                            if re.search(r"^" + re.escape(target.lower()) + r"\b", opt_l):
+                                await s.select_option(label=opt)
+                                print(f"  ☑️  {label_clean.title()}: {opt}")
+                                results["fields_filled"].append(label_text.strip())
+                                break
+
+                    elif any(k in label_clean for k in ["background check", "drug test", "drug screen"]):
+                        if "Yes" in opts:
+                            await s.select_option(label="Yes")
+                            print(f"  ☑️  {label_text.strip()}: Yes")
+                            results["fields_filled"].append(label_text.strip())
+
+                    elif any(k in label_clean for k in ["interviewed with", "previously applied", "worked for this company", "employed by", "worked here"]):
+                        for opt in ["No", "False"]:
+                            if opt in opts:
+                                await s.select_option(label=opt)
+                                print(f"  ☑️  {label_text.strip()}: {opt}")
+                                results["fields_filled"].append(label_text.strip())
+                                break
+
+                    elif any(k in label_clean for k in ["highest level of education", "education completed", "level of education"]):
+                        for opt in ["Bachelor's Degree", "Bachelor", "College - Bachelor of Science", "Associate's Degree"]:
+                            if opt in opts:
+                                await s.select_option(label=opt)
+                                print(f"  ☑️  {label_text.strip()}: {opt}")
+                                results["fields_filled"].append(label_text.strip())
+                                break
+
                     # Relocation & Housing (Always Yes)
-                    elif any(k in label_clean for k in ["relocate", "relocation", "housing", "bengaluru", "bangalore", "area", "pittsburgh"]):
+                    elif any(k in label_clean for k in ["relocate", "relocation", "housing", "bengaluru", "bangalore", "area", "pittsburgh", "commute"]):
                         if "Yes" in opts:
                             await s.select_option(label="Yes")
                             print(f"  ☑️  {label_text.strip()}: Yes")
@@ -751,6 +799,11 @@ async def fill_application(
                                 await inp_el.fill(ans)
                                 print(f"  ✍️  {label_raw}: {ans}")
                                 results["fields_filled"].append(label_raw)
+                            elif any(k in label_clean for k in ["portfolio", "github", "website", "project link"]):
+                                ans = curated.get("portfolio_website") or curated.get("github", "")
+                                await inp_el.fill(ans)
+                                print(f"  ✍️  {label_raw}: {ans}")
+                                results["fields_filled"].append(label_raw)
                 except Exception:
                     continue
         except Exception as e:
@@ -772,10 +825,29 @@ async def fill_application(
         print("=" * 60 + "\n")
 
         if pause_for_review and not headless:
-            print("👀 Browser window is open on your screen for your manual review.")
-            print("The session will stay open until you close the browser window or press Ctrl+C.")
+            print("Browser window is open on your screen for your manual review.")
+            print("Submit the application when ready, or close the browser window.")
             try:
                 while not page.is_closed():
+                    curr_url = page.url.lower()
+                    if any(k in curr_url for k in ["thank", "confirm", "success", "applied", "completed", "/done"]):
+                        print("Submission detected via confirmation URL.")
+                        await asyncio.sleep(3)
+                        break
+                    try:
+                        body_txt = (await page.inner_text("body", timeout=500)).lower()
+                        if any(k in body_txt for k in [
+                            "thank you for applying",
+                            "application submitted",
+                            "your application has been received",
+                            "thanks for applying",
+                            "application was successfully submitted",
+                        ]):
+                            print("Submission confirmation detected on page.")
+                            await asyncio.sleep(3)
+                            break
+                    except Exception:
+                        pass
                     await asyncio.sleep(1)
             except (KeyboardInterrupt, asyncio.CancelledError):
                 pass

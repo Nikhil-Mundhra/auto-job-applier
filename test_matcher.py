@@ -254,8 +254,97 @@ def test_salary_and_unlisted_tools():
     assert "When GPA is optional (no asterisk *, not required), LEAVE IT BLANK." in task
     assert 'fill: "3.6"' in task
     assert "nearer to the upper end of the posted compensation range" in task
-    assert 'ALWAYS answer "Yes"' in task
     assert 'write either "1 year" or "6 months"' in task
+
+
+def test_matcher_edge_cases():
+    from matcher import (
+        extract_salary_range,
+        calculate_desired_salary,
+        extract_keywords,
+        score_text_against_keywords,
+        detect_application_region,
+        curate_profile,
+    )
+
+    # 1. extract_salary_range edge cases
+    assert extract_salary_range("No salary disclosed") is None
+    
+    # "k" suffix
+    r_k = extract_salary_range("Salary: $80k - $120k")
+    assert r_k == (80000.0, 120000.0, "$")
+
+    # Shorthand < 500 without k
+    r_short = extract_salary_range("Base: $120 - $180 per year")
+    assert r_short == (120000.0, 180000.0, "$")
+
+    # LPA / lakh
+    r_lpa = extract_salary_range("Compensation: ₹12 - ₹18 LPA")
+    assert r_lpa == (1200000.0, 1800000.0, "₹")
+
+    r_lakh = extract_salary_range("Package: ₹10 - ₹15 lakh per annum")
+    assert r_lakh == (1000000.0, 1500000.0, "₹")
+
+    # Hourly salary calculations
+    hourly_with_range = calculate_desired_salary("$25 - $45/hour", is_hourly=True)
+    assert "/hour" in hourly_with_range
+    hourly_numeric = calculate_desired_salary("$25 - $45/hour", is_hourly=True, numeric_only=True)
+    assert hourly_numeric.isdigit()
+
+    hourly_india = calculate_desired_salary("", region="india", is_hourly=True)
+    assert "₹600" in hourly_india
+    assert calculate_desired_salary("", region="india", is_hourly=True, numeric_only=True) == "600"
+
+    hourly_intl = calculate_desired_salary("", region="uae", is_hourly=True)
+    assert "$45" in hourly_intl
+    assert calculate_desired_salary("", region="uae", is_hourly=True, numeric_only=True) == "45"
+
+    # Annual salary target < 50,000 (rounds to nearest 1000)
+    sub_50k = calculate_desired_salary("$30,000 - $40,000")
+    assert "$" in sub_50k
+
+    # Currency formatting: INR and EUR
+    inr_sal = calculate_desired_salary("₹600,000 - ₹900,000")
+    assert "₹" in inr_sal
+    eur_sal = calculate_desired_salary("€60,000 - €80,000")
+    assert "€" in eur_sal
+
+    # Numeric only annual defaults
+    assert calculate_desired_salary("", region="india", numeric_only=True) == "1800000"
+    assert calculate_desired_salary("", region="uae", numeric_only=True) == "120000"
+
+    # 2. extract_keywords edge case: empty text
+    assert extract_keywords("") == set()
+
+    # 3. score_text_against_keywords edge cases
+    assert score_text_against_keywords("", {"python"}) == (0.0, [])
+    assert score_text_against_keywords("some text", set()) == (0.0, [])
+    
+    # Short keywords (len <= 2) boundary checks
+    score_hit, hits = score_text_against_keywords("Proficient in C and R programming", {"c", "r"})
+    assert "c" in hits and "r" in hits
+    assert score_hit >= 2.0
+
+    score_miss, hits_miss = score_text_against_keywords("Catch the cat", {"c"})
+    assert score_miss == 0.0
+    assert hits_miss == []
+
+    # 4. detect_application_region edge cases
+    # Indian city in URL
+    assert detect_application_region(job_url="https://example.com/jobs/bangalore/dev") == "india"
+
+    # Location header with US / International location
+    assert detect_application_region(job_description="Location: New York, NY\nRequirements: Python") == "uae"
+
+    # Indian city mentioned but overridden by US Citizen / Security clearance / Dubai
+    assert detect_application_region(job_description="Based in Bangalore or Remote. Must be a US Citizen.") == "uae"
+
+    # 5. curate_profile with non-list skill value
+    custom_profile = load_profile()
+    custom_profile["skills"]["other_custom"] = "expert note"
+    curated_custom = curate_profile(custom_profile, job_description="Python developer")
+    assert curated_custom["skills"]["other_custom"] == "expert note"
+
 
 
 if __name__ == "__main__":

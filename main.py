@@ -72,6 +72,10 @@ def build_task(
     formatted_addr = address_info.get("formatted", "")
     phone = curated.get("phone", "")
 
+    linkedin = curated.get("linkedin", profile.get("linkedin", ""))
+    github = curated.get("github", profile.get("github", ""))
+    portfolio_website = curated.get("portfolio_website", profile.get("portfolio_website", ""))
+
     address_block = f"""
 ADDRESS & CONTACT INFORMATION (APPLICATION TARGET REGION: {region_label}):
 - Target Address for this Application:
@@ -85,6 +89,10 @@ ADDRESS & CONTACT INFORMATION (APPLICATION TARGET REGION: {region_label}):
 - Candidate Contact Phone:
   * Phone Number: "{phone}"
   * Note: For country code or dialing prefix dropdowns, select "{country}".
+- Professional Profiles & Websites:
+  * LinkedIn URL: "{linkedin}"
+  * GitHub URL: "{github}"
+  * Portfolio / Personal Website: "{portfolio_website}"
 """
 
     jd_context_block = ""
@@ -110,18 +118,25 @@ COMPANY INTELLIGENCE & SCREENING ALIGNMENT:
   "{why_answer}"
 """
 
-    gender = curated.get("gender", "Male")
-    ethnicity = curated.get("ethnicity", "North Indian")
-    nationality = curated.get("nationality", "Indian")
-    dob = curated.get("date_of_birth", "28/10/2005")
-    dob_iso = curated.get("dob_iso", "2005-10-28")
-    dob_day = curated.get("dob_day", "28")
-    dob_month = curated.get("dob_month", "10")
-    dob_year = curated.get("dob_year", "2005")
+    full_name = curated.get("full_name", profile.get("full_name", "Nikhil Mundhra"))
+    name_parts = full_name.strip().split()
+    first_name = name_parts[0] if name_parts else "Nikhil"
+    last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else "Mundhra"
+
+    gender = curated.get("gender", profile.get("gender", "Male"))
+    ethnicity = curated.get("ethnicity", profile.get("ethnicity", "North Indian"))
+    nationality = curated.get("nationality", profile.get("nationality", "Indian"))
+    dob = curated.get("date_of_birth", profile.get("date_of_birth", "28/10/2005"))
+    dob_iso = curated.get("dob_iso", profile.get("dob_iso", "2005-10-28"))
+    dob_day = curated.get("dob_day", profile.get("dob_day", "28"))
+    dob_month = curated.get("dob_month", profile.get("dob_month", "10"))
+    dob_year = curated.get("dob_year", profile.get("dob_year", "2005"))
 
     personal_block = f"""
 PERSONAL, DEMOGRAPHIC & EEO INFORMATION:
-- Full Name: Nikhil Mundhra
+- Full Name: {full_name}
+- First Name / Given Name: "{first_name}"
+- Last Name / Family Name / Surname: "{last_name}"
 - Gender: {gender} (for dropdowns: "Male" or "Man")
 - Ethnicity / Race: {ethnicity} (for US EEO dropdowns: select "Asian" or "Asian (Not Hispanic or Latino)")
 - Nationality / Citizenship: {nationality}
@@ -136,7 +151,9 @@ PERSONAL, DEMOGRAPHIC & EEO INFORMATION:
 """
 
     compact_curated = {
-        "full_name": curated.get("full_name", ""),
+        "full_name": full_name,
+        "first_name": first_name,
+        "last_name": last_name,
         "gender": gender,
         "ethnicity": ethnicity,
         "nationality": nationality,
@@ -145,11 +162,14 @@ PERSONAL, DEMOGRAPHIC & EEO INFORMATION:
         "dob_day": dob_day,
         "dob_month": dob_month,
         "dob_year": dob_year,
-        "email": curated.get("email", ""),
-        "phone": curated.get("phone", ""),
-        "location": curated.get("location", ""),
+        "email": curated.get("email", profile.get("email", "")),
+        "phone": curated.get("phone", profile.get("phone", "")),
+        "linkedin": linkedin,
+        "github": github,
+        "portfolio_website": portfolio_website,
+        "location": curated.get("location", profile.get("location", "")),
         "address": address_info,
-        "education": curated.get("education", []),
+        "education": curated.get("education", profile.get("education", [])),
         "work_history": [
             {k: v for k, v in exp.items() if not k.startswith("_")}
             for exp in curated.get("work_history", [])
@@ -184,7 +204,7 @@ How to work:
    text (for example "Current employer" should map to the most recent
    entry in work_history).
 3. ADDRESS & CONTACT DETAILS:
-   When filling address blocks (such as 'Address', 'City', 'State/Province', 'Postal', 'Country'):
+   When filling address blocks (such as 'Address', 'City', 'State/Province', 'Postal', 'Country', 'LinkedIn', 'Website'):
    - Use the values from ADDRESS & CONTACT INFORMATION above.
    - For 'Address' or 'Street Address' input, fill: "{street}"
    - For 'City' input, fill: "{city}"
@@ -192,8 +212,11 @@ How to work:
    - For 'Postal' or 'Zip' or 'Postal Code' input, fill: "{postal}"
    - For 'Country' dropdown/input, select/enter: "{country}"
    - For 'Phone' or 'Phone Number' input, fill: "{phone}"
+   - For 'LinkedIn' profile input, fill: "{linkedin}"
+   - For 'GitHub' or 'Website' or 'Portfolio' input, fill: "{github}" or "{portfolio_website}"
 4. BATCHING INSTRUCTION:
    Proactively batch all co-located, visible form fields together in a single step rather than pausing between them (e.g., fill First Name, Last Name, Email, Phone, Address, City, State/Province, Postal Code, and Country all in one single multi-action step).
+   CAUTION: Do not batch dropdown selections that trigger dependent AJAX/DOM refreshes in the same step as their dependent fields (for example, in Workday, selecting Country re-renders State/Province; select Country first, then fill State/Province on the subsequent step).
 5. Fill work history and project fields using the curated entries in
    CURATED PROFILE above. Do not attempt to add arbitrary or extra
    unlisted roles.
@@ -204,16 +227,16 @@ How to work:
    - For company-specific questions ("Why do you want to work here?", "What
      interests you about our mission?"), use the recommended answers and
      points in COMPANY INTELLIGENCE & SCREENING ALIGNMENT above.
-   -  Write short, direct answers grounded only in the profile data above, 
-   in a normal human voice, not a marketing voice. 
-   Do not use: delve, leverage, robust, seamless, foster, streamline,
-   unlock, elevate, moreover, furthermore, "it's important to note," "in
-   today's fast paced world," "I'm thrilled to," or "passionate about"
-   without a specific fact behind it. Do not restate the question before
-   answering it. Do not use em dashes or semicolons to link two clauses,
-   just end the sentence. Vary sentence length instead of writing three
-   sentences of the same shape in a row. Ground each answer in one concrete
-   detail from work_history or education rather than an abstract claim.
+   - Write short, direct answers grounded only in the profile data above, 
+     in a normal human voice, not a marketing voice. 
+     Do not use: delve, leverage, robust, seamless, foster, streamline,
+     unlock, elevate, moreover, furthermore, "it's important to note," "in
+     today's fast paced world," "I'm thrilled to," or "passionate about"
+     without a specific fact behind it. Do not restate the question before
+     answering it. Do not use em dashes or semicolons to link two clauses,
+     just end the sentence. Vary sentence length instead of writing three
+     sentences of the same shape in a row. Ground each answer in one concrete
+     detail from work_history or education rather than an abstract claim.
 7. RESUME / CV AUTO-UPLOAD:
    When a resume or CV upload section, button, or dropzone appears:
    - You can invoke the custom `upload_resume` action directly.
@@ -227,14 +250,28 @@ How to work:
    - When GPA is required (has * or required attribute), fill: "3.6".
 9. DESIRED SALARY INSTRUCTION:
    - Always request nearer to the upper end of the posted compensation range for the role (e.g. if the posting lists $100,000 - $190,000, specify $180,000; if in India with ₹12L - ₹18L, specify ₹18,00,000).
+   - If no compensation range is posted and a salary is required, enter:
+     * For US/Remote/International listings: "$120,000" (or "$60" if hourly)
+     * For UAE listings: "AED 180,000" (or "AED 15,000" if monthly)
+     * For India listings: "₹18,00,000" (or "1800000" if numeric)
 10. RELOCATION INSTRUCTION:
    - When asked if willing to relocate, ALWAYS answer "Yes".
 11. UNLISTED TOOLS & FRAMEWORKS:
    - When asked for experience with a tool or framework not listed in the candidate's profile/resume, write either "1 year" or "6 months" depending on input type (e.g., "1" or "1 year" for years, "6" or "6 months" for months).
-12. Stop as soon as you reach the final review or submit page. Do not
+12. WORK AUTHORIZATION & VISA SPONSORSHIP INSTRUCTION:
+   - For positions located in the UAE: Candidate has UAE residency and is legally authorized to work without sponsorship. Select "Yes" to authorized, "No" to requires visa sponsorship.
+   - For positions located in India: Candidate holds Indian citizenship and is legally authorized to work without sponsorship. Select "Yes" to authorized, "No" to requires visa sponsorship.
+   - For positions in the United States or other international locations:
+     * "Are you legally authorized to work in [Country]?": Select "No" (unless the portal specifies pending sponsorship or F-1/OPT/CPT where applicable).
+     * "Will you now or in the future require employment visa sponsorship?": Select "Yes" (requires sponsorship).
+13. NOTICE PERIOD & EARLIEST START DATE:
+   - For 'Notice Period' questions: select or enter "Immediate" or "0 days".
+   - For 'Earliest Start Date' or 'Availability': select or enter "Immediate" or "Flexible" (for post-graduation roles, specify "May 2027").
+14. Stop as soon as you reach the final review or submit page. Do not
    click Submit, Apply, or any equivalent final action under any
-   circumstances. Take a screenshot of that page and end the run so a
-   person can review it before anything is sent.
+   circumstances. Take a screenshot of that page and end the run by invoking
+   the `done` tool with a concise summary of completed fields and any skipped
+   or blank fields, so a person can review it before anything is sent.
 """
 
 
@@ -378,15 +415,28 @@ async def run(job_url: str, headless: bool, job_description: str = "") -> None:
 
     class JobApplierAgent(Agent):
         """
-        Enhanced browser-use Agent with deterministic cookie auto-acceptance
-        and OpenRouter in-flight rate limit backoff.
+        Enhanced browser-use Agent with deterministic cookie auto-acceptance,
+        filechooser auto-interception for resume upload, and OpenRouter in-flight rate limit backoff.
         """
+        def __init__(self, *args: Any, target_resume_path: Optional[Path] = None, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self._target_resume_path = target_resume_path
+            self._interceptor_pages: set[int] = set()
+
         async def step(self, step_info: Any = None) -> None:
             if self.browser_session:
                 try:
                     await auto_accept_cookies(self.browser_session)
                 except Exception:
                     pass
+                if self._target_resume_path:
+                    try:
+                        page = await self.browser_session.get_current_page()
+                        if page and id(page) not in self._interceptor_pages:
+                            await attach_file_chooser_interceptor(page, self._target_resume_path)
+                            self._interceptor_pages.add(id(page))
+                    except Exception:
+                        pass
             return await super().step(step_info)
 
         async def get_model_output(self, input_messages: list[Any]) -> Any:
@@ -407,6 +457,7 @@ async def run(job_url: str, headless: bool, job_description: str = "") -> None:
         llm=llm,
         browser=browser,
         controller=controller,
+        target_resume_path=resume_path,
         use_vision=True,
         vision_detail_level="low",
         initial_actions=[{"navigate": {"url": job_url}}],

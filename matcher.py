@@ -123,12 +123,16 @@ def extract_salary_range(text: str) -> Optional[tuple[float, float, str]]:
         low = float(m.group(2))
         high = float(m.group(3))
         unit = (m.group(4) or "").lower()
-        if "k" in unit or (low < 500 and high < 500 and sym in ["$", "€", "£"]):
-            low *= 1000
-            high *= 1000
-        elif "lpa" in unit or "lakh" in unit:
+        is_hourly_text = bool(re.search(r"/(?:hr|hour)|per\s+hour", cleaned, re.IGNORECASE))
+        if "lpa" in unit or "lakh" in unit:
             low *= 100000
             high *= 100000
+        elif "k" in unit or "thousand" in unit:
+            low *= 1000
+            high *= 1000
+        elif not is_hourly_text and (low < 500 and high < 500 and sym in ["$", "€", "£"]):
+            low *= 1000
+            high *= 1000
         return low, high, sym
     return None
 

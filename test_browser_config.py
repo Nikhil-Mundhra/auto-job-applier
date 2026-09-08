@@ -29,6 +29,57 @@ def test_find_chromium_executable_respects_env_override(tmp_path):
         assert find_chromium_executable() == str(fake_browser)
 
 
+def test_find_chromium_executable_env_invalid(tmp_path):
+    fake_browser = tmp_path / "non_existent"
+    with patch.dict(os.environ, {"BROWSER_EXECUTABLE_PATH": str(fake_browser)}):
+        # When env path doesn't exist, it should continue searching
+        res = find_chromium_executable()
+        assert res != str(fake_browser)
+
+
+def test_find_chromium_executable_playwright_cache_testing_chrome(tmp_path):
+    cache_dir = tmp_path / "Library/Caches/ms-playwright"
+    chrome_bin = cache_dir / "chromium-1234/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+    chrome_bin.parent.mkdir(parents=True, exist_ok=True)
+    chrome_bin.write_text("#!/bin/sh\necho testing\n")
+    chrome_bin.chmod(0o755)
+
+    with patch.dict(os.environ, {}, clear=True), \
+         patch("browser_config.Path.home", return_value=tmp_path), \
+         patch("os.path.exists", side_effect=lambda p: str(chrome_bin) == p or p == str(chrome_bin.parent)), \
+         patch("os.access", return_value=True):
+        res = find_chromium_executable()
+        assert res == str(chrome_bin)
+
+
+def test_find_chromium_executable_playwright_cache_headless_shell(tmp_path):
+    cache_dir = tmp_path / "Library/Caches/ms-playwright"
+    shell_bin = cache_dir / "chromium-1234/chrome-headless-shell"
+    shell_bin.parent.mkdir(parents=True, exist_ok=True)
+    shell_bin.write_text("#!/bin/sh\necho shell\n")
+    shell_bin.chmod(0o755)
+
+    with patch.dict(os.environ, {}, clear=True), \
+         patch("browser_config.Path.home", return_value=tmp_path), \
+         patch("os.path.exists", side_effect=lambda p: str(shell_bin) == p or p == str(shell_bin.parent)), \
+         patch("os.access", return_value=True):
+        res = find_chromium_executable()
+        assert res == str(shell_bin)
+
+
+def test_find_chromium_executable_none_found(tmp_path):
+    empty_home = tmp_path / "empty_home"
+    empty_home.mkdir(parents=True, exist_ok=True)
+
+    with patch.dict(os.environ, {}, clear=True), \
+         patch("browser_config.Path.home", return_value=empty_home), \
+         patch("os.path.exists", return_value=False), \
+         patch("os.access", return_value=False):
+        res = find_chromium_executable()
+        assert res is None
+
+
+
 def test_get_browser_launch_args_contains_anti_detection_flags():
     args = get_browser_launch_args()
     assert "--disable-blink-features=AutomationControlled" in args
