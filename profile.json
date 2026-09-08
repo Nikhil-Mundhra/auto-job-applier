@@ -1,34 +1,321 @@
 {
-  "full_name": "Jane Doe",
-  "email": "jane@example.com",
-  "phone": "+1 555 010 0000",
-  "location": "New York, NY",
-  "resume_path": "/Users/yourname/Documents/resume.pdf",
-  "linkedin": "https://linkedin.com/in/janedoe",
+  "full_name": "Nikhil Mundhra",
+  "gender": "Male",
+  "ethnicity": "North Indian",
+  "nationality": "Indian",
+  "date_of_birth": "28/10/2005",
+  "dob_iso": "2005-10-28",
+  "dob_day": "28",
+  "dob_month": "10",
+  "dob_year": "2005",
+  "email": "nikhil.mundhra@nyu.edu",
+  "secondary_email": "nikhilmundhra28@gmail.com",
+  "phone": "+971 503526342",
+  "secondary_phone": "+91 7060410033",
+  "location": "Abu Dhabi, United Arab Emirates",
+  "addresses": {
+    "uae": {
+      "street_address": "New York University Abu Dhabi, Saadiyat Island, P.O. Box 129188",
+      "address_line1": "New York University Abu Dhabi, Saadiyat Island",
+      "address_line2": "P.O. Box 129188",
+      "city": "Abu Dhabi",
+      "state_province": "Abu Dhabi",
+      "postal_code": "129188",
+      "country": "United Arab Emirates",
+      "formatted": "New York University Abu Dhabi, Saadiyat Island, P.O. Box 129188, Abu Dhabi, United Arab Emirates"
+    },
+    "india": {
+      "street_address": "79, West Mukherjee Nagar",
+      "address_line1": "79, West Mukherjee Nagar",
+      "address_line2": "",
+      "city": "New Delhi",
+      "state_province": "Delhi",
+      "postal_code": "110009",
+      "country": "India",
+      "formatted": "79, West Mukherjee Nagar, New Delhi 110009, India"
+    }
+  },
+  "resume_path": "/Users/nikhilmundhra/Documents/Github/auto-job-applier/Portfolio/Nikhil Mundhra CV.pdf",
+  "linkedin": "https://www.linkedin.com/in/mundhra-nikhil",
+  "github": "https://github.com/Nikhil-Mundhra",
+  "portfolio_website": "https://github.com/Nikhil-Mundhra",
+  "summary": "Final-year Computer Science student at NYU Abu Dhabi with double minors in Applied Math and Economics (GPA 3.9). Experienced in building production AI systems, full-stack applications, and computer vision models.",
   "work_history": [
     {
-      "company": "Acme Corp",
-      "title": "Software Engineer",
-      "start_date": "2022/06",
-      "end_date": "present",
-      "duties": [
-        "Built the internal analytics dashboard used by the growth team",
-        "Led migration of the data pipeline to a new warehouse"
+      "company": "Kanerika Software Pvt. Ltd.",
+      "title": "AI Intern",
+      "location": "Hyderabad, India",
+      "start_date": "2026/06",
+      "end_date": "2026/08",
+      "domains": ["ai", "machine learning", "backend", "full stack"],
+      "skill_tags": [
+        "python",
+        "machine learning",
+        "deep learning",
+        "gnn",
+        "llm",
+        "next.js",
+        "tailwind css",
+        "etl",
+        "parquet",
+        "api testing",
+        "rest api",
+        "wopi"
       ],
-      "skill_tags": ["python", "sql", "react"]
+      "duties": [
+        "Built a frontier fraud detection tool with GNN-based anomaly detection, business-driven rule engine, and LLM explainability",
+        "Developed a distributed Microsoft WOPI and native add-in end-to-end for Klara (document compliance AI engine)",
+        "Engineered ETL pipelines on bronze data to convert Parquet files into queryable data lakes",
+        "Developed full UI/UX marketing pages in Next.js and Tailwind CSS for internal products Karl and Klarity360",
+        "Conducted functional and technical API testing and debugging of Kanerika AI Labs products"
+      ]
+    },
+    {
+      "company": "VivahGo Planners",
+      "title": "Founder & Lead Software Engineer",
+      "location": "New Delhi, India",
+      "start_date": "2026/03",
+      "end_date": "present",
+      "domains": ["full stack", "frontend", "backend", "mobile", "system design"],
+      "skill_tags": [
+        "react",
+        "typescript",
+        "javascript",
+        "node.js",
+        "express",
+        "mongodb",
+        "capacitor",
+        "rest api",
+        "system design",
+        "devops",
+        "cloud"
+      ],
+      "duties": [
+        "Ideated, designed, and developed VivahGo.com AI-driven wedding workspace platform end-to-end",
+        "Architected cross-platform mobile app and scalable backend using React, Capacitor, Express, and MongoDB",
+        "Engineered core modules: automated budget tracker, real-time guest list management, and vendor marketplace",
+        "Owned full engineering lifecycle from UI/UX design to database management, DevOps, and third-party API integrations"
+      ]
+    },
+    {
+      "company": "DeedFlow",
+      "title": "Co-Founder & Technical Lead",
+      "location": "Abu Dhabi, United Arab Emirates",
+      "start_date": "2026/02",
+      "end_date": "2026/07",
+      "domains": ["fintech", "web3", "backend", "compliance"],
+      "skill_tags": [
+        "python",
+        "typescript",
+        "fintech",
+        "compliance",
+        "kyc/aml",
+        "system design",
+        "workflow automation"
+      ],
+      "duties": [
+        "Architected DeedFlow, an orchestration system for tokenized real estate with automated compliance checks",
+        "Engineered gated workflows covering KYC/AML, approvals, ownership proof, and audit-ready transaction packs",
+        "Built working prototype at UAE Adaptive City Hackathon, placing in top 3 at Yas Marina Circuit"
+      ]
+    },
+    {
+      "company": "Naturo Industries (Jai Balajee Plywood)",
+      "title": "Software Developer",
+      "location": "New Delhi, India (Remote)",
+      "start_date": "2025/08",
+      "end_date": "2026/01",
+      "domains": ["full stack", "frontend", "automation"],
+      "skill_tags": [
+        "javascript",
+        "astro.js",
+        "html/css",
+        "python",
+        "google apps script",
+        "search engine",
+        "automation"
+      ],
+      "duties": [
+        "Developed and optimized a product search software compatible with cloud directory indexing",
+        "Built and deployed NaturoIndustries.com using modern HTML/CSS and Astro.js optimized for PDF viewing",
+        "Implemented Google Apps Script workflow automations for scheduling and client appointment management"
+      ]
+    },
+    {
+      "company": "Alstom Transport India Limited",
+      "title": "Cybersecurity & Project Management Intern",
+      "location": "New Delhi / Vadodara / Bangalore, India",
+      "start_date": "2025/06",
+      "end_date": "2025/08",
+      "domains": ["cybersecurity", "project management", "systems engineering"],
+      "skill_tags": [
+        "cybersecurity",
+        "network segmentation",
+        "iec 62443",
+        "ot security",
+        "systems engineering",
+        "v-cycle",
+        "diagnostics"
+      ],
+      "duties": [
+        "Conducted multi-site research on testing and commissioning of RS17 trains across 4+ offices",
+        "Analyzed DfQ V-cycle, gate reviews, and system validation & verification (V&V) checkpoints",
+        "Acquired exposure to OT cybersecurity models including network segmentation and IEC 62443 compliance",
+        "Mapped EBOM to MBOM lifecycles to understand sourcing, traceability, and supplier coordination"
+      ]
+    },
+    {
+      "company": "Phool.co",
+      "title": "Marketing & Data Analyst Intern",
+      "location": "New Delhi, India",
+      "start_date": "2024/06",
+      "end_date": "2024/08",
+      "domains": ["data analysis", "marketing analytics", "e-commerce"],
+      "skill_tags": [
+        "data analysis",
+        "stata",
+        "python",
+        "sql",
+        "digital marketing",
+        "e-commerce",
+        "customer segmentation"
+      ],
+      "duties": [
+        "Automated comprehensive buying behavior analysis across geographical, financial, and seasonal parameters using STATA",
+        "Formulated subscription and membership models on Shopify for improved customer retention",
+        "Revamped email marketing campaigns with customer segmentation, increasing click rates"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "OCT Analyser Capstone",
+      "role": "Lead ML Researcher",
+      "start_date": "2026/01",
+      "end_date": "present",
+      "domains": ["ai", "machine learning", "computer vision"],
+      "skill_tags": [
+        "python",
+        "pytorch",
+        "cnn",
+        "computer vision",
+        "deep learning",
+        "image segmentation"
+      ],
+      "description": "Developing advanced convolutional neural networks for feature discovery and volumetric analysis of retinal OCT imaging under NYUAD faculty supervision."
+    },
+    {
+      "name": "Cool Reminders Web App",
+      "role": "Full Stack Developer",
+      "start_date": "2025/08",
+      "end_date": "2025/12",
+      "domains": ["full stack", "web development"],
+      "skill_tags": [
+        "javascript",
+        "node.js",
+        "express",
+        "mongodb",
+        "socket.io",
+        "react",
+        "vue.js",
+        "jwt",
+        "rest api"
+      ],
+      "description": "MERN stack task and reminder management application deployed on Render with MongoDB Atlas, Passport.js auth, and real-time Socket.IO updates."
     }
   ],
   "education": [
     {
-      "school": "NYU Abu Dhabi",
-      "degree": "BS Computer Science",
-      "start_year": 2022,
-      "end_year": 2026
+      "school": "New York University Abu Dhabi",
+      "degree": "BSc in Computer Science",
+      "minors": "Economics & Applied Mathematics",
+      "gpa": "3.9 / 4.0",
+      "start_year": 2023,
+      "end_year": 2027,
+      "location": "Abu Dhabi, UAE",
+      "highlights": [
+        "Capstone Project in advanced CNNs for retinal imaging",
+        "Study away semesters at NYU New York (Fall 2025) and NYU Paris (Spring 2025)",
+        "Leadership: Alternate NYC Senator at NYU SGA, President of Mathematics SIG, Treasurer of Code Paris"
+      ]
     }
   ],
+  "skills": {
+    "programming_languages": [
+      "Python",
+      "JavaScript",
+      "TypeScript",
+      "C",
+      "C++",
+      "Java",
+      "SQL",
+      "R",
+      "HTML/CSS"
+    ],
+    "frameworks_and_libraries": [
+      "React",
+      "Next.js",
+      "Node.js",
+      "Express",
+      "Flask",
+      "PyTorch",
+      "NumPy",
+      "Tailwind CSS",
+      "Vite",
+      "MongoDB Atlas",
+      "Mongoose",
+      "Socket.IO",
+      "Capacitor",
+      "Astro.js"
+    ],
+    "tools_and_platforms": [
+      "Docker",
+      "Git",
+      "GitHub Actions",
+      "CI/CD",
+      "Azure DevOps",
+      "VSCode",
+      "Sentry",
+      "PostHog",
+      "Cloudflare",
+      "Vercel",
+      "AWS",
+      "Linux"
+    ],
+    "specializations": [
+      "Artificial Intelligence & Machine Learning",
+      "Computer Vision & Deep Learning (CNNs)",
+      "Full Stack Web & Mobile Development",
+      "API Design & Distributed Systems",
+      "Operational Technology (OT) Cybersecurity"
+    ]
+  },
   "screening_preferences": {
-    "requires_sponsorship": false,
+    "gender": "Male",
+    "ethnicity": "North Indian",
+    "nationality": "Indian",
+    "date_of_birth": "28/10/2005",
+    "dob_iso": "2005-10-28",
+    "dob_day": "28",
+    "dob_month": "10",
+    "dob_year": "2005",
+    "requires_sponsorship": true,
+    "sponsorship_details": "Requires US/international work visa sponsorship. Has UAE residency & Indian citizenship.",
     "willing_to_relocate": true,
-    "salary_expectation": "open to discussion, market rate for the role"
+    "willing_to_relocate_rule": "Always answer Yes to relocation questions",
+    "gpa_rules": {
+      "when_required": "3.6",
+      "when_optional": ""
+    },
+    "desired_salary_rule": "Nearer to the upper end of the posted compensation range for that role",
+    "unlisted_tool_experience": {
+      "years_format": "1 year",
+      "months_format": "6 months",
+      "numeric_years": "1",
+      "numeric_months": "6"
+    },
+    "available_start_date": "Immediate / flexible",
+    "salary_expectation": "Nearer to the upper end of the posted compensation range for the role",
+    "work_authorization": "Authorized to work in UAE and India; requires visa sponsorship elsewhere"
   }
 }
