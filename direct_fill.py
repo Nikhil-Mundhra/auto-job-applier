@@ -263,11 +263,26 @@ async def fill_application(
         # Resume Upload
         print("\n📎 Uploading Resume PDF...")
         resume_uploaded = False
+
+        # 1. If there is an 'Attach resume' trigger (e.g. JazzHR), click it to reveal the file input in the UI
+        try:
+            attach_trigger = page.locator(
+                "#resumator-choose-upload, a:has-text('Attach resume'), button:has-text('Attach resume'), a:has-text('Upload Resume')"
+            ).first
+            if await attach_trigger.count() > 0 and await attach_trigger.is_visible():
+                await attach_trigger.click()
+                await page.wait_for_timeout(300)
+        except Exception:
+            pass
+
+        # 2. Attach the PDF file to the file input
         for sel in ["#resumator-resume-value"] + RESUME_INPUT_SELECTORS:
             try:
                 locator = page.locator(sel).first
                 if await locator.count() > 0:
                     await locator.set_input_files(str(resume_path))
+                    await locator.dispatch_event("change")
+                    await locator.dispatch_event("input")
                     print(f"  ✅ Resume attached: {resume_path.name} (via {sel})")
                     results["resume_uploaded"] = True
                     resume_uploaded = True
@@ -278,7 +293,9 @@ async def fill_application(
         if not resume_uploaded:
             # Try clicking upload dropzone if input wasn't directly settable
             try:
-                dropzone = page.locator("#resumator-choose-upload, .resumator-file-upload-drop-zone, button:has-text('Upload Resume')").first
+                dropzone = page.locator(
+                    "#resumator-choose-upload, .resumator-file-upload-drop-zone, button:has-text('Upload Resume')"
+                ).first
                 if await dropzone.count() > 0:
                     async with page.expect_file_chooser() as fc_info:
                         await dropzone.click()
@@ -481,6 +498,28 @@ async def fill_application(
                         else:
                             print(f"  ℹ️  {label_text.strip()}: Optional -> Left unselected")
 
+                    # Visa Sponsorship / Work Authorization (Check before location/states to avoid 'United States' false match)
+                    elif any(k in label_clean for k in ["sponsorship", "visa", "authorized to work", "work authorization"]):
+                        if any(k in label_clean for k in ["united states", "u.s.", "usa"]):
+                            sponsorship_needed = True
+                        elif "india" in label_clean or "uae" in label_clean:
+                            sponsorship_needed = False
+                        else:
+                            sponsorship_needed = curated.get("target_region") not in ["india", "uae"]
+
+                        asks_without = any(w in label_clean for w in ["without", "do not require", "don't require", "without company"])
+                        target = ("No" if sponsorship_needed else "Yes") if asks_without else ("Yes" if sponsorship_needed else "No")
+
+                        for opt in opts:
+                            opt_l = opt.strip().lower()
+                            if any(d == opt_l or d in opt_l for d in ["-- no answer --", "no answer", "select"]):
+                                continue
+                            if re.search(r"^" + re.escape(target.lower()) + r"\b", opt_l):
+                                await s.select_option(label=opt)
+                                print(f"  ☑️  {label_text.strip()}: {opt}")
+                                results["fields_filled"].append(label_text.strip())
+                                break
+
                     # Relocation & Housing (Always Yes)
                     elif any(k in label_clean for k in ["relocate", "relocation", "housing", "bengaluru", "bangalore", "area", "pittsburgh"]):
                         if "Yes" in opts:
@@ -489,7 +528,7 @@ async def fill_application(
                             results["fields_filled"].append(label_text.strip())
 
                     # State or School location (e.g. PA, NY, etc. -> NYU is in NY)
-                    elif any(k in label_clean for k in ["states", "live or go to school"]):
+                    elif any(k in label_clean for k in ["live or go to school", "following states", "states:"]):
                         if "Yes" in opts:
                             await s.select_option(label="Yes")
                             print(f"  ☑️  {label_text.strip()}: Yes")
@@ -537,20 +576,6 @@ async def fill_application(
                             await s.select_option(label="Yes")
                             print(f"  ☑️  {label_text.strip()}: Yes")
                             results["fields_filled"].append(label_text.strip())
-
-                    # Visa Sponsorship / Work Authorization
-                    elif any(k in label_clean for k in ["sponsorship", "visa", "authorized to work", "work authorization"]):
-                        asks_without = any(w in label_clean for w in ["without", "do not require", "don't require", "without company"])
-                        if asks_without:
-                            target = "No" if curated.get("target_region") not in ["india", "uae"] else "Yes"
-                        else:
-                            target = "Yes" if curated.get("target_region") not in ["india", "uae"] else "No"
-                        for opt in opts:
-                            if opt.lower().startswith(target.lower()) or target.lower() in opt.lower():
-                                await s.select_option(label=opt)
-                                print(f"  ☑️  {label_text.strip()}: {opt}")
-                                results["fields_filled"].append(label_text.strip())
-                                break
 
                     elif any(k in label_clean for k in ["experience", "years", "how long", "worked with"]):
                         for opt_cand in ["1 year", "1", "6 months", "< 1 year", "0-1 years", "1-2 years", "1 - 2 years"]:
@@ -609,13 +634,19 @@ async def fill_application(
                             "ui/ux", "web app development", "devops", "bash", "database management",
                             "c/c++", "linux", "aws", "python", "javascript", "typescript", "sql"
                         })
+                        generic_stops = {"cloud", "development", "management", "systems", "app", "web"}
                         for cb in cbs:
                             val = (await cb.get_attribute("value") or "").strip()
                             cb_lbl = await cb.evaluate("e => e.parentElement ? e.parentElement.innerText : ''")
                             candidate_text = (val or cb_lbl).strip().lower()
                             matched = False
                             for sk in all_skills:
-                                if sk in candidate_text or candidate_text in sk:
+                                if sk in generic_stops:
+                                    continue
+                                pat = r"(?:^|[^\w\+\#])" + re.escape(sk) + r"(?:$|[^\w\+\#])"
+                                if re.search(pat, candidate_text):
+                                    if "google cloud" in candidate_text and "google cloud" not in all_skills:
+                                        continue
                                     matched = True
                                     break
                             if matched:
@@ -623,6 +654,9 @@ async def fill_application(
                                     await cb.check(force=True)
                                     print(f"  ☑️  Skill: Checked {val or cb_lbl.strip()}")
                                     results["fields_filled"].append(f"Skill: {val or cb_lbl.strip()}")
+                            else:
+                                if await cb.is_checked():
+                                    await cb.uncheck(force=True)
 
                     # Areas of interest
                     elif any(k in lbl_clean for k in ["areas of interest", "interests", "focus"]):
