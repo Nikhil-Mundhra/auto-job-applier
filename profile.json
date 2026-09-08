@@ -314,8 +314,15 @@
       "numeric_years": "1",
       "numeric_months": "6"
     },
-    "available_start_date": "Immediate / flexible",
+    "available_start_date": "Immediate / flexible (May 2027 for post-grad roles)",
     "salary_expectation": "Nearer to the upper end of the posted compensation range for the role",
-    "work_authorization": "Authorized to work in UAE and India; requires visa sponsorship elsewhere"
+    "work_authorization": "Authorized to work in UAE and India; requires visa sponsorship elsewhere",
+    "role_types_open_to": [
+      "Full-time",
+      "Co-op",
+      "Graduate Program"
+    ],
+    "post_may_2027_preference": "Open to Co-op, full-time, and graduate programs post May 2027. Avoid standard internships unless paying handsomely at upper compensation tier.",
+    "browser_preference": "/Applications/Opera GX.app/Contents/MacOS/Opera"
   }
 }
