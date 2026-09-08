@@ -27,26 +27,11 @@ from matcher import (
 )
 from cookie_handler import COOKIE_AUTO_ACCEPT_JS
 from resume_uploader import get_validated_resume_path, RESUME_INPUT_SELECTORS
-
-
-def find_chromium_executable() -> Optional[str]:
-    """Auto-detect Chromium / Google Chrome binary on macOS."""
-    playwright_cache = Path.home() / "Library/Caches/ms-playwright"
-    if playwright_cache.exists():
-        for chrome_bin in playwright_cache.glob("**/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"):
-            if chrome_bin.exists() and os.access(chrome_bin, os.X_OK):
-                return str(chrome_bin)
-        for chrome_bin in playwright_cache.glob("**/chrome-headless-shell"):
-            if chrome_bin.exists() and os.access(chrome_bin, os.X_OK):
-                return str(chrome_bin)
-    for p in [
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/Applications/Chromium.app/Contents/MacOS/Chromium",
-        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-    ]:
-        if os.path.exists(p) and os.access(p, os.X_OK):
-            return p
-    return None
+from browser_config import (
+    find_chromium_executable,
+    get_browser_launch_args,
+    STEALTH_INIT_SCRIPT,
+)
 
 
 async def fill_application(
@@ -74,11 +59,7 @@ async def fill_application(
     print(f"📄 Resume: {resume_path.name}")
 
     exe_path = find_chromium_executable()
-    chrome_args = [
-        "--use-mock-keychain",
-        "--password-store=basic",
-        "--disable-features=Translate",
-    ]
+    chrome_args = get_browser_launch_args()
 
     results = {
         "fields_filled": [],
@@ -87,21 +68,37 @@ async def fill_application(
         "screenshot": None,
     }
 
+    user_data_dir = os.getenv("BROWSER_USER_DATA_DIR")
+    browser = None
+
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=headless,
-            executable_path=exe_path,
-            args=chrome_args,
-        )
-        context = await browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        )
-        page = await context.new_page()
+        if user_data_dir:
+            profile_dir = Path(user_data_dir).expanduser()
+            profile_dir.mkdir(parents=True, exist_ok=True)
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=str(profile_dir),
+                headless=headless,
+                executable_path=exe_path,
+                args=chrome_args,
+                ignore_default_args=["--enable-automation"],
+                viewport={"width": 1280, "height": 900},
+            )
+        else:
+            browser = await p.chromium.launch(
+                headless=headless,
+                executable_path=exe_path,
+                args=chrome_args,
+                ignore_default_args=["--enable-automation"],
+            )
+            context = await browser.new_context(
+                viewport={"width": 1280, "height": 900},
+            )
+
+        # Inject stealth evasions to mask automated testing attributes
+        await context.add_init_script(STEALTH_INIT_SCRIPT)
+
+        pages = context.pages
+        page = pages[0] if pages else await context.new_page()
 
         print(f"🌐 Navigating to {job_url}...")
         await page.goto(job_url, wait_until="domcontentloaded", timeout=45000)
@@ -784,10 +781,10 @@ async def fill_application(
                 pass
 
         try:
-            if not browser.is_connected():
-                pass
-            else:
+            if browser and browser.is_connected():
                 await browser.close()
+            elif context:
+                await context.close()
         except Exception:
             pass
         return results

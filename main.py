@@ -32,6 +32,7 @@ from resume_uploader import (
     attach_file_chooser_interceptor,
 )
 from cookie_handler import auto_accept_cookies, get_cookie_init_script
+from browser_config import find_chromium_executable, get_browser_launch_args
 
 PROFILE_PATH = Path(__file__).parent / "profile.json"
 
@@ -357,40 +358,22 @@ async def run(job_url: str, headless: bool, job_description: str = "") -> None:
 
     controller = create_resume_controller(resume_path)
 
-    # Locate Chrome / Chromium binary
-    def find_chromium_executable() -> Optional[str]:
-        playwright_cache = Path.home() / "Library/Caches/ms-playwright"
-        if playwright_cache.exists():
-            for chrome_bin in playwright_cache.glob("**/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"):
-                if chrome_bin.exists() and os.access(chrome_bin, os.X_OK):
-                    return str(chrome_bin)
-            for chrome_bin in playwright_cache.glob("**/chrome-headless-shell"):
-                if chrome_bin.exists() and os.access(chrome_bin, os.X_OK):
-                    return str(chrome_bin)
-        for p in [
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/Applications/Chromium.app/Contents/MacOS/Chromium",
-            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-        ]:
-            if os.path.exists(p) and os.access(p, os.X_OK):
-                return p
-        return None
-
     exe_path = find_chromium_executable()
     if exe_path:
-        print(f"🌐 Using Chromium binary: {exe_path}")
+        print(f"Browser binary: {exe_path}")
 
-    # Browser launch arguments:
-    # --use-mock-keychain and --password-store=basic suppress macOS "Chromium Safe Storage" keychain popups
-    browser_args = [
-        "--use-mock-keychain",
-        "--password-store=basic",
-        "--disable-features=Translate",
-    ]
+    browser_args = get_browser_launch_args()
+
+    cdp_url = os.getenv("CDP_URL")
+    user_data_dir = os.getenv("BROWSER_USER_DATA_DIR")
+
     browser = Browser(
         headless=headless,
-        executable_path=exe_path,
+        executable_path=exe_path if not cdp_url else None,
+        cdp_url=cdp_url,
+        user_data_dir=user_data_dir,
         args=browser_args,
+        ignore_default_args=["--enable-automation"],
     )
 
     class JobApplierAgent(Agent):
